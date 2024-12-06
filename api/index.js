@@ -87,7 +87,7 @@ app.post("/api/questions", async (req, res) => {
 });
 
 // GET API to Fetch All Questions
-app.get("/api/questions", async (req, res) => {
+app.get("/questions", async (req, res) => {
   console.log("hello");
   try {
     const clozeQuestions = await Cloze.find();
