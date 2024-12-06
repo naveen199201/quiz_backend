@@ -11,7 +11,7 @@ app.use(express.json()); // Use express.json() for JSON parsing
 
 // Connect to MongoDB
 mongoose
-  .connect("mongodb://localhost:27017/questions_db", {
+  .connect("mongodb://uijdjvpxv8zvy7x1ziqj:z91Bi5O57q7eYBupUoy@badlozhaoglgjzlj1679-mongodb.services.clever-cloud.com:2627/badlozhaoglgjzlj1679", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
