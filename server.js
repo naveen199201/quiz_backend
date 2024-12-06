@@ -104,7 +104,7 @@ app.get("/api/questions", async (req, res) => {
     res.status(500).json({ error: "An error occurred while fetching questions." });
   }
 });
-
+app.get("/", (req, res) => res.send("Express on Vercel"));
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
