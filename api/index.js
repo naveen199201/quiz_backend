@@ -27,7 +27,7 @@ const ClozeSchema = new mongoose.Schema({
 
 
 const CategorizeSchema = new mongoose.Schema({
-  questionText: { type: String, required: true },
+  // questionText: { type: String, required: true },
   categories: { type: [String], required: true },
   answers: [
     {
@@ -54,30 +54,46 @@ const Comprehension = mongoose.model("Comprehension", ComprehensionSchema);
 
 // POST API to Save Questions
 app.post("/api/questions", async (req, res) => {
+  
   try {
     const {
       clozeQuestions = [],
       categorizeQuestions = [],
       comprehensionQuestions = [],
     } = req.body;
-
+    console.log(req.body);
+    const reqPromises=[];
     // Save Cloze Questions
+    if(clozeQuestions.length>0){
     const clozePromises = clozeQuestions.map((question) =>
       new Cloze(question).save()
-    );
+    )
+    reqPromises.push(clozePromises)
+  };
 
     // Save Categorize Questions
+    if(categorizeQuestions.length>0){
     const categorizePromises = categorizeQuestions.map((question) =>
       new Categorize(question).save()
-    );
+    )
+    reqPromises.push(categorizePromises)
+
+  };
 
     // Save Comprehension Questions
+    if(comprehensionQuestions.length>0){
     const comprehensionPromises = comprehensionQuestions.map((question) =>
       new Comprehension(question).save()
-    );
+    )
+    reqPromises.push(comprehensionPromises)
+
+  };
 
     // Execute all save operations in parallel
-    await Promise.all([...clozePromises, ...categorizePromises, ...comprehensionPromises]);
+    // if()
+
+    await Promise.all(reqPromises);
+    
 
     res.status(200).json({ message: "Questions saved successfully!" });
   } catch (error) {
