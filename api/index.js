@@ -29,7 +29,7 @@ const ClozeSchema = new mongoose.Schema({
 const CategorizeSchema = new mongoose.Schema({
   // questionText: { type: String, required: true },
   categories: { type: [String], required: true },
-  answers: [
+  items: [
     {
       category: { type: String, required: true },
       answer: { type: String, required: true },
