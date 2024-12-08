@@ -1,13 +1,15 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const multer = require('multer');
+const path = require('path');
 
 const app = express();
 const PORT = 5000;
 
-// Middleware
+
 app.use(cors());
-app.use(express.json()); // Use express.json() for JSON parsing
+app.use(express.json()); 
 
 // Connect to MongoDB
 mongoose
@@ -23,14 +25,22 @@ mongoose
 
 // Define Schemas and Models
 const ClozeSchema = new mongoose.Schema({
+  image: {
+    data: Buffer,
+    contentType: String,
+  },
   questionText: { type: String, required: true },
   underlinedWords: { type: [String], required: true },
   answerText: { type: String, required: true },
+  rawText:{type:[string],required:true}
 });
 
 const CategorizeSchema = new mongoose.Schema({
-  // questionText: { type: String, required: true },
-  
+  description: { type: String },
+  image: {
+    data: Buffer,
+    contentType: String,
+  },
   categories: { type: [String], required: true },
   items: [
     {
@@ -42,6 +52,10 @@ const CategorizeSchema = new mongoose.Schema({
 
 const ComprehensionSchema = new mongoose.Schema({
   paragraph: { type: String, required: true },
+  image: {
+    data: Buffer,
+    contentType: String,
+  },
   questions: [
     {
       text: { type: String, required: true },
@@ -54,7 +68,58 @@ const Cloze = mongoose.model("Cloze", ClozeSchema);
 const Categorize = mongoose.model("Categorize", CategorizeSchema);
 const Comprehension = mongoose.model("Comprehension", ComprehensionSchema);
 
-// POST API to Save Questions
+const imageSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  image: {
+    data: Buffer,       // Binary data for the image
+    contentType: String, // MIME type of the image
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+const Image = mongoose.model('Image', imageSchema);
+
+
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, '/api/uploads'); // Save image in the 'public/uploads' folder
+//   },
+//   filename: (req, file, cb) => {
+//     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+//     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname)); // Create unique file name
+//   },
+// });
+const storage = multer.memoryStorage();
+const upload = multer({ storage});
+
+app.post("/imageupload", upload.single("image"), async (req, res) => {
+
+  try{
+    const newImage = new Image({
+      name: req.file.originalname,     
+      image: {
+        data: req.file.buffer,
+        contentType: req.file.mimetype,
+      },
+    });
+
+    const savedImage = await newImage.save();
+    res.status(200).json({
+      message: "Image uploaded successfully",
+      imageId: savedImage._id, // Return the ID for retrieval
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to upload image" });
+  }
+});
+
+
 app.post("/api/questions", async (req, res) => {
   try {
     const {
@@ -63,7 +128,6 @@ app.post("/api/questions", async (req, res) => {
       comprehensionQuestions = [],
     } = req.body;
 
-    console.log(req.body);  // Logging the request body for debugging
 
     const reqPromises = [];
 
@@ -95,14 +159,12 @@ app.post("/api/questions", async (req, res) => {
       reqPromises.push(...categorizePromises);
     }
 
-    // Save or Update Comprehension Questions
     if (comprehensionQuestions.length > 0) {
       const comprehensionPromises = comprehensionQuestions.map((question) => {
         if (question._id) {
-          // If the question has an _id, update it
+
           return Comprehension.findByIdAndUpdate(question._id, question, { new: true });
         } else {
-          // If the question does not have an _id, create a new question
           return new Comprehension(question).save();
         }
       });
@@ -133,7 +195,6 @@ app.post("/api/submissions", async (req, res) => {
       { strict: false } // Allow additional fields not defined in the schema
     );
     const submissionsModel = mongoose.model("Submissions", dynamicSchema);
-    console.log(req.body);
     await submissionsModel(req.body).save();
     res.status(200).json({ message: "Submissons saved successfully!" });
   } catch (error) {
@@ -145,7 +206,6 @@ app.post("/api/submissions", async (req, res) => {
 });
 // GET API to Fetch All Questions
 app.get("/api/questions", async (req, res) => {
-  console.log("hello");
   const { quiz } = req.query;
   let clozeParams={};
   let comprehensionParams = {};
@@ -179,6 +239,60 @@ app.get("/api/questions", async (req, res) => {
       .json({ error: "An error occurred while fetching questions." });
   }
 });
+
+app.post("/api/remove", async (req, res) => {
+  const { collection, id, mcq_id } = req.query;  // Expect query parameters: collection, id, and optionally mcq_id
+
+  // Check if the necessary parameters are provided
+  if (!collection || !id) {
+    return res.status(400).json({ error: "Both 'collection' and 'id' are required" });
+  }
+
+  try {
+    let deletedQuestion;
+
+    // Perform the deletion based on the collection type
+    switch (collection.toLowerCase()) {
+      case "cloze":
+        deletedQuestion = await clozeQuestions.findByIdAndDelete(id);
+        break;
+
+      case "categorize":
+        deletedQuestion = await categorizeQuestions.findByIdAndDelete(id);
+        break;
+
+      case "comprehension":
+        // If mcq_id is provided, try to delete from comprehensionQuestions.questions array
+        if (mcq_id) {
+          deletedQuestion = await comprehensionQuestions.findOneAndUpdate(
+            { _id: id, "questions._id": mcq_id },  // Find the specific question by mcq_id in the questions array
+            { $pull: { questions: { _id: mcq_id } } },  // Remove the question from the questions array
+            { new: true }  // Return the updated document
+          );
+        } else {
+          // If mcq_id is not provided, delete the entire comprehension question
+          deletedQuestion = await comprehensionQuestions.findByIdAndDelete(id);
+        }
+        break;
+
+      default:
+        return res.status(400).json({ error: "Invalid collection type" });
+    }
+
+    // If no question is found in the given collection
+    if (!deletedQuestion) {
+      return res.status(404).json({ error: `${collection} question not found` });
+    }
+
+    // Return success response
+    res.status(200).json({ message: `${collection} question deleted successfully` });
+  } catch (error) {
+    console.error(`Error deleting ${collection} question:`, error);
+    res.status(500).json({ error: `An error occurred while deleting the ${collection} question.` });
+  }
+});
+
+
 app.get("/", (req, res) => res.send("Express on Vercel"));
 // Start the server
 app.listen(PORT, () => {
