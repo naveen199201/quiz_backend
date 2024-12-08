@@ -32,7 +32,7 @@ const ClozeSchema = new mongoose.Schema({
   questionText: { type: String, required: true },
   underlinedWords: { type: [String], required: true },
   answerText: { type: String, required: true },
-  rawText:{type:[string],required:true}
+  rawText:{type:[String],required:true}
 });
 
 const CategorizeSchema = new mongoose.Schema({
@@ -241,30 +241,30 @@ app.get("/api/questions", async (req, res) => {
 });
 
 app.post("/api/remove", async (req, res) => {
-  const { collection, id, mcq_id } = req.query;  // Expect query parameters: collection, id, and optionally mcq_id
-
+  const { type, id, mcq_id } = req.query;  // Expect query parameters: type, id, and optionally mcq_id
+  
   // Check if the necessary parameters are provided
-  if (!collection || !id) {
-    return res.status(400).json({ error: "Both 'collection' and 'id' are required" });
+  if (!type|| !id) {
+    return res.status(400).json({ error: "Both 'type' and 'id' are required" });
   }
 
   try {
     let deletedQuestion;
 
-    // Perform the deletion based on the collection type
-    switch (collection.toLowerCase()) {
+    // Perform the deletion based on the type type
+    switch (type.toLowerCase()) {
       case "cloze":
-        deletedQuestion = await clozeQuestions.findByIdAndDelete(id);
+        deletedQuestion = await Cloze.findByIdAndDelete({_id:id});
         break;
 
       case "categorize":
-        deletedQuestion = await categorizeQuestions.findByIdAndDelete(id);
+        deletedQuestion = await Categorize.findByIdAndDelete({_id:id});
         break;
 
       case "comprehension":
         // If mcq_id is provided, try to delete from comprehensionQuestions.questions array
         if (mcq_id) {
-          deletedQuestion = await comprehensionQuestions.findOneAndUpdate(
+          deletedQuestion = await Comprehension.findOneAndUpdate(
             { _id: id, "questions._id": mcq_id },  // Find the specific question by mcq_id in the questions array
             { $pull: { questions: { _id: mcq_id } } },  // Remove the question from the questions array
             { new: true }  // Return the updated document
@@ -276,19 +276,19 @@ app.post("/api/remove", async (req, res) => {
         break;
 
       default:
-        return res.status(400).json({ error: "Invalid collection type" });
+        return res.status(400).json({ error: "Invalid type type" });
     }
 
-    // If no question is found in the given collection
+    // If no question is found in the given type
     if (!deletedQuestion) {
-      return res.status(404).json({ error: `${collection} question not found` });
+      return res.status(404).json({ error: `${type} question not found` });
     }
 
     // Return success response
-    res.status(200).json({ message: `${collection} question deleted successfully` });
+    res.status(200).json({ message: `${type} question deleted successfully` });
   } catch (error) {
-    console.error(`Error deleting ${collection} question:`, error);
-    res.status(500).json({ error: `An error occurred while deleting the ${collection} question.` });
+    console.error(`Error deleting ${type} question:`, error);
+    res.status(500).json({ error: `An error occurred while deleting the ${type} question.` });
   }
 });
 
