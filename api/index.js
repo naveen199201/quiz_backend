@@ -23,6 +23,28 @@ mongoose
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
+  const RawTextSchema = new mongoose.Schema({
+    key: { type: String, required: true }, // Unique identifier for the block
+    text: { type: String, required: true }, // Content of the text block
+    type: { type: String, required: true }, // Type of text block (e.g., 'unstyled', 'header')
+    depth: { type: Number, default: 0 }, // Nesting level for blocks (e.g., lists)
+    data: { type: Object, default: {} }, // Additional metadata
+    inlineStyleRanges: [
+      {
+        offset: { type: Number, required: true }, // Start position of the style
+        length: { type: Number, required: true }, // Number of characters the style applies to
+        style: { type: String, required: true }, // Style name (e.g., 'UNDERLINE', 'BOLD')
+      },
+    ],
+    entityRanges: [
+      {
+        offset: { type: Number, required: true }, // Start position of the entity
+        length: { type: Number, required: true }, // Number of characters the entity applies to
+        key: { type: Number, required: true }, // Key of the entity in an external map
+      },
+    ],
+  });
+  
 // Define Schemas and Models
 const ClozeSchema = new mongoose.Schema({
   image: {
@@ -32,7 +54,7 @@ const ClozeSchema = new mongoose.Schema({
   questionText: { type: String, required: true },
   underlinedWords: { type: [String], required: true },
   answerText: { type: String, required: true },
-  rawText:{type:String,required:true}
+  rawText:{type:[RawTextSchema],required:true}
 });
 
 const CategorizeSchema = new mongoose.Schema({
@@ -242,7 +264,8 @@ app.get("/api/questions", async (req, res) => {
 
 app.post("/api/remove", async (req, res) => {
   const { type, id, mcq_id } = req.query;  // Expect query parameters: type, id, and optionally mcq_id
-  
+  console.log(type)
+  console.log(id)
   // Check if the necessary parameters are provided
   if (!type|| !id) {
     return res.status(400).json({ error: "Both 'type' and 'id' are required" });
@@ -271,7 +294,7 @@ app.post("/api/remove", async (req, res) => {
           );
         } else {
           // If mcq_id is not provided, delete the entire comprehension question
-          deletedQuestion = await comprehensionQuestions.findByIdAndDelete(id);
+          deletedQuestion = await Comprehension.findByIdAndDelete(id);
         }
         break;
 
