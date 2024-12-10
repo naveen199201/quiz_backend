@@ -23,27 +23,27 @@ mongoose
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-  const RawTextSchema = new mongoose.Schema({
-    key: { type: String, required: true }, // Unique identifier for the block
-    text: { type: String, required: true }, // Content of the text block
-    type: { type: String, required: true }, // Type of text block (e.g., 'unstyled', 'header')
-    depth: { type: Number, default: 0 }, // Nesting level for blocks (e.g., lists)
-    data: { type: Object, default: {} }, // Additional metadata
-    inlineStyleRanges: [
-      {
-        offset: { type: Number, required: true }, // Start position of the style
-        length: { type: Number, required: true }, // Number of characters the style applies to
-        style: { type: String, required: true }, // Style name (e.g., 'UNDERLINE', 'BOLD')
-      },
-    ],
-    entityRanges: [
-      {
-        offset: { type: Number, required: true }, // Start position of the entity
-        length: { type: Number, required: true }, // Number of characters the entity applies to
-        key: { type: Number, required: true }, // Key of the entity in an external map
-      },
-    ],
-  });
+  // const RawTextSchema = new mongoose.Schema({
+  //   key: { type: String, required: true }, // Unique identifier for the block
+  //   text: { type: String, required: true }, // Content of the text block
+  //   type: { type: String, required: true }, // Type of text block (e.g., 'unstyled', 'header')
+  //   depth: { type: Number, default: 0 }, // Nesting level for blocks (e.g., lists)
+  //   data: { type: Object, default: {} }, // Additional metadata
+  //   inlineStyleRanges: [
+  //     {
+  //       offset: { type: Number, required: true }, // Start position of the style
+  //       length: { type: Number, required: true }, // Number of characters the style applies to
+  //       style: { type: String, required: true }, // Style name (e.g., 'UNDERLINE', 'BOLD')
+  //     },
+  //   ],
+  //   entityRanges: [
+  //     {
+  //       offset: { type: Number, required: true }, // Start position of the entity
+  //       length: { type: Number, required: true }, // Number of characters the entity applies to
+  //       key: { type: Number, required: true }, // Key of the entity in an external map
+  //     },
+  //   ],
+  // });
   
 // Define Schemas and Models
 const ClozeSchema = new mongoose.Schema({
@@ -54,7 +54,7 @@ const ClozeSchema = new mongoose.Schema({
   questionText: { type: String, required: true },
   underlinedWords: { type: [String], required: true },
   answerText: { type: String, required: true },
-  rawText:{type:[RawTextSchema],required:true}
+  
 });
 
 const CategorizeSchema = new mongoose.Schema({
